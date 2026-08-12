@@ -2,6 +2,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const { Client, Collection, GatewayIntentBits } = require('discord.js');
+const { loadCommands } = require('./utils/loadCommands');
 const { token } = require('./config.json');
 
 // create a new client instance
@@ -9,22 +10,10 @@ const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 
 client.commands = new Collection();
 client.cooldowns = new Collection();
-const foldersPath = path.join(__dirname, 'commands');
-const commandFolders = fs.readdirSync(foldersPath);
 
-for (const folder of commandFolders) {
-    const commandsPath = path.join(foldersPath, folder);
-    const commandFiles = fs.readdirSync(commandsPath).filter((file) => file.endsWith('.js'));
-    for (const file of commandFiles) {
-        const filePath = path.join(commandsPath, file);
-        const command = require(filePath);
-        // set a new item in the collection with the key as the command name and the value as the exported module
-        if ('data' in command && 'execute' in command) {
-            client.commands.set(command.data.name, command);
-        } else {
-            console.log(`[WARNING] The command at ${filePath} is missing a required "data" or "execute" property.`);
-        }
-    }
+// key the collection by command name, with the exported module as the value
+for (const { command } of loadCommands()) {
+    client.commands.set(command.data.name, command);
 }
 
 const eventsPath = path.join(__dirname, 'events');
@@ -38,6 +27,25 @@ for (const file of eventFiles) {
     } else {
         client.on(event.name, (...args) => event.execute(...args));
     }
+}
+
+// a rejection that escapes a command's try/catch would otherwise be silent
+process.on('unhandledRejection', (reason) => {
+    console.error('Unhandled promise rejection:', reason);
+});
+
+// after an uncaught exception the process is in an unknown state, so log and let the
+// supervisor (systemd, pm2, docker, ...) restart the bot rather than limping along
+process.on('uncaughtException', (error) => {
+    console.error('Uncaught exception:', error);
+    client.destroy().finally(() => process.exit(1));
+});
+
+for (const signal of ['SIGINT', 'SIGTERM']) {
+    process.on(signal, () => {
+        console.log(`Received ${signal}, closing the gateway connection.`);
+        client.destroy().finally(() => process.exit(0));
+    });
 }
 
 // log in to discord with the client's token
