@@ -16,7 +16,7 @@ A slash-command Discord bot built with [discord.js](https://discord.js.org) v14.
 | `/ping` | Replies with "Pong! 🏓" (5s cooldown) |
 | `/server` | Shows the current server's name and member count |
 | `/user` | Shows the invoking user's username and join date |
-| `/reload` | Hot-reloads a command by name without restarting the bot |
+| `/reload` | Hot-reloads a command by name without restarting the bot (Administrator only) |
 
 ## Prerequisites
 
@@ -76,8 +76,11 @@ Once running, the bot logs `Ready! Logged in as <bot tag>` to the console and th
 │       ├── server.js
 │       └── user.js
 ├── events/
+│   ├── error.js
 │   ├── interactionCreate.js
 │   └── ready.js
+├── utils/
+│   └── loadCommands.js   # shared commands/ scan used by index.js and deploy-commands.js
 ├── deploy-commands.js
 ├── index.js
 ├── package.json
@@ -86,7 +89,7 @@ Once running, the bot logs `Ready! Logged in as <bot tag>` to the console and th
 
 ### Adding a new command
 
-Add a file to a folder under `commands/` (or create a new category folder) that exports an object with `data` (a `SlashCommandBuilder`) and an async `execute(interaction)` function, optionally with a `cooldown` (in seconds, defaults to 3). Re-run `node deploy-commands.js` to register it, then restart the bot (or use `/reload` for existing commands during development).
+Add a file to a folder under `commands/` (or create a new category folder) that exports an object with `data` (a `SlashCommandBuilder`) and an async `execute(interaction)` function, optionally with a `cooldown` (in seconds, defaults to 3). Re-run `node deploy-commands.js` to register it with Discord, then use `/reload <name>` to load it into the running bot without a restart.
 
 ### Adding a new event
 
